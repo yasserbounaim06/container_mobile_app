@@ -1,122 +1,149 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'dart:async'; // Required for Future.delayed
 
+/// The main entry point of the application.
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// DATA_MODEL
+/// Represents a shipping container with its number, ISO code, and creation date.
+class ShippingContainer {
+  final String number;
+  final String isoCode;
+  final DateTime createdAt;
 
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+  /// Creates a [ShippingContainer] instance.
+  ShippingContainer({
+    required this.number,
+    required this.isoCode,
+    required this.createdAt,
+  });
+
+  /// Creates a copy of this [ShippingContainer] with optional new values.
+  ShippingContainer copyWith({
+    String? number,
+    String? isoCode,
+    DateTime? createdAt,
+  }) {
+    return ShippingContainer(
+      number: number ?? this.number,
+      isoCode: isoCode ?? this.isoCode,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  /// Converts this [ShippingContainer] to a JSON map.
+  Map<String, dynamic> toJson() {
+    return {
+      'number': number,
+      'isoCode': isoCode,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  /// Creates a [ShippingContainer] from a JSON map.
+  factory ShippingContainer.fromJson(Map<String, dynamic> json) {
+    return ShippingContainer(
+      number: json['number'] as String,
+      isoCode: json['isoCode'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+/// STATE_MANAGEMENT
+/// Manages the list of shipping containers and provides methods to interact with them.
+class ShippingContainerProvider with ChangeNotifier {
+  final List<ShippingContainer> _containers = [];
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  List<ShippingContainer> get containers => _containers;
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  /// Adds a new container to the list.
+  void addContainer(ShippingContainer container) {
+    _containers.add(container);
+    notifyListeners();
+  }
 
-  final String title;
+  /// Removes a container from the list.
+  void removeContainer(ShippingContainer container) {
+    _containers.remove(container);
+    notifyListeners();
+  }
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  /// Simulates loading containers from a data source (e.g., API).
+  Future<void> loadContainers() async {
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 2));
+    // Simulate loading some data
+    _containers.addAll([
+      ShippingContainer(number: 'TCNU1234567', isoCode: '22G1', createdAt: DateTime.now().subtract(const Duration(days: 10))),
+      ShippingContainer(number: 'GESU9876543', isoCode: '45G1', createdAt: DateTime.now().subtract(const Duration(days: 5))),
+    ]);
+    notifyListeners();
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+/// UI_COMPONENTS
+/// The main application widget.
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    return ChangeNotifierProvider(
+      create: (context) => ShippingContainerProvider()..loadContainers(), // Load data on app start
+      child: MaterialApp(
+        title: 'Shipping Container Tracker',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: const ContainerListScreen(),
+      ),
+    );
+  }
+}
+
+/// A screen that displays a list of shipping containers.
+class ContainerListScreen extends StatelessWidget {
+  const ContainerListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Shipping Containers'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      body: Consumer<ShippingContainerProvider>(
+        builder: (context, provider, child) {
+          if (provider.containers.isEmpty) {
+            return const Center(child: CircularProgressIndicator()); // Show loading indicator
+          } else {
+            return ListView.builder(
+              itemCount: provider.containers.length,
+              itemBuilder: (context, index) {
+                final container = provider.containers[index];
+                return ListTile(
+                  title: Text(container.number),
+                  subtitle: Text(container.isoCode),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => provider.removeContainer(container),
+                  ),
+                );
+              },
+            );
+          }
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
+        onPressed: () {
+          // TODO: Implement add container functionality
+        },
         child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
